@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"math/rand"
 	"os"
 	"strings"
 	"time"
@@ -54,6 +55,11 @@ func getCmds() map[string]cliCommand {
 			name:        "explore",
 			description: "List pokemon at a given location",
 			callback:    commandExplore,
+		},
+		"catch": {
+			name:        "catch",
+			description: "Attempt to catch a given pokemon",
+			callback:    commandCatch,
 		},
 	}
 }
@@ -145,5 +151,53 @@ func commandExplore(args []string) error {
 	for _, encounter := range data.PokemonEncounters {
 		fmt.Println(encounter.Pokemon.Name)
 	}
+	return nil
+}
+
+func commandCatch(args []string) error {
+	var name string
+	if len(args) > 1 {
+		for i, arg := range args {
+			args[i] = strings.Trim(arg, ".:")
+		}
+		name = strings.Join(args, "-")
+	} else if len(args) < 1 {
+		fmt.Println("please add the name of the pokemon you would like to catch")
+		return nil
+	} else {
+		name = args[0]
+	}
+
+	url := "https://pokeapi.co/api/v2/pokemon/" + name
+
+	bytes, err := getResBytes(url)
+	if err != nil {
+		fmt.Println("pokemon not found")
+		return err
+	}
+
+	pokemon := unmarshalPokemon(bytes)
+
+	if pokemon.BaseExperience == 0 {
+		fmt.Println("pokemon not found")
+		return nil
+	}
+
+	fmt.Printf("Throwing a Pokeball at %s...\n", pokemon.Name)
+
+	catchChance := int(5000 / pokemon.BaseExperience)
+	fmt.Printf("%v%% chance to catch\n", catchChance)
+
+	if catchChance >= 100 {
+		pokemonCaught(pokemon)
+	} else {
+		if catchChance > rand.Intn(99) {
+			pokemonCaught(pokemon)
+		} else {
+			fmt.Printf("%v escaped!\n", pokemon.Name)
+			return nil
+		}
+	}
+
 	return nil
 }
