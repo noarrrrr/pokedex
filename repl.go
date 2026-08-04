@@ -61,6 +61,16 @@ func getCmds() map[string]cliCommand {
 			description: "Attempt to catch a given pokemon",
 			callback:    commandCatch,
 		},
+		"inspect": {
+			name:        "inspect",
+			description: "List information about a pokemon in your dex",
+			callback:    commandInspect,
+		},
+		"pokedex": {
+			name:        "pokedex",
+			description: "List pokemon in your pokedex",
+			callback:    commandDex,
+		},
 	}
 }
 
@@ -155,17 +165,9 @@ func commandExplore(args []string) error {
 }
 
 func commandCatch(args []string) error {
-	var name string
-	if len(args) > 1 {
-		for i, arg := range args {
-			args[i] = strings.Trim(arg, ".:")
-		}
-		name = strings.Join(args, "-")
-	} else if len(args) < 1 {
-		fmt.Println("please add the name of the pokemon you would like to catch")
+	name := parseName(args)
+	if name == "" {
 		return nil
-	} else {
-		name = args[0]
 	}
 
 	url := "https://pokeapi.co/api/v2/pokemon/" + name
@@ -199,5 +201,45 @@ func commandCatch(args []string) error {
 		}
 	}
 
+	return nil
+}
+
+func commandInspect(args []string) error {
+	name := parseName(args)
+	if name == "" {
+		return nil
+	}
+
+	p, ok := dex[name]
+
+	if !ok {
+		fmt.Println("You do not have this pokemon")
+		return nil
+	}
+	fmt.Printf(`Name: %v
+Height: %v
+Weight: %v
+Stats:
+`, p.Name, p.Height, p.Weight)
+
+	for _, stat := range p.Stats {
+		fmt.Printf("  -%s: %d\n", stat.Stat.Name, stat.BaseStat)
+	}
+	fmt.Println("Types:")
+	for _, t := range p.Types {
+		fmt.Printf("  -%s\n", t.Type.Name)
+	}
+	return nil
+}
+
+func commandDex(args []string) error {
+	if len(dex) == 0 {
+		fmt.Println("You don't have any pokemon")
+		return nil
+	}
+	fmt.Println("Your Pokedex:")
+	for _, p := range dex {
+		fmt.Printf("  -%s\n", p.Name)
+	}
 	return nil
 }
